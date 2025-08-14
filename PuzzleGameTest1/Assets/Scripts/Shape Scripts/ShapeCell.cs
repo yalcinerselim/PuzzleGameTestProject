@@ -5,8 +5,6 @@ using UnityEngine.UI;
 
 public class ShapeCell : MonoBehaviour
 {
-    // Gride yerleþmekten sorumlu olan sýnýf.
-    public int _cellID;
     [SerializeField] private Image _image;
 
     private void Awake()
@@ -31,7 +29,7 @@ public class ShapeCell : MonoBehaviour
 
     public void SetColor(Color color)
     {
-        _image.color = color;
+        _image.color = new Color(color.r, color.g, color.b, color.a);
     }
 
 }

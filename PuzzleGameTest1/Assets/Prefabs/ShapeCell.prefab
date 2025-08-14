@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 3116641688003576299}
   - component: {fileID: 5301604884352025799}
   - component: {fileID: 3521821971493582402}
-  - component: {fileID: 2622284738490016548}
+  - component: {fileID: -2298938647212669328}
   m_Layer: 5
   m_Name: ShapeCell
   m_TagString: ShapeCell
@@ -89,7 +89,7 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
---- !u!114 &2622284738490016548
+--- !u!114 &-2298938647212669328
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -98,7 +98,8 @@ MonoBehaviour:
   m_GameObject: {fileID: 7828802874669164430}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8c35c800dd26ad844be04293b11ce41c, type: 3}
+  m_Script: {fileID: 11500000, guid: 3e54a6b0f9bd66b488b7791696d100af, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _dragLayer: {fileID: 0}
+  _cellID: 0
+  _image: {fileID: 0}

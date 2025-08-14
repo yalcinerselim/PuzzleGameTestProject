@@ -5,7 +5,7 @@ using UnityEngine.EventSystems;
 
 public class Shape : MonoBehaviour, IBeginDragHandler, IEndDragHandler, IDragHandler, IPointerClickHandler
 {
-    // Hareketi sa�lamaktan sorumlu olan s�n�f.
+    // Hareketi sağlamaktan sorumlu olan sınıf.
 
     //-- Unity Actions --//
     public UnityAction<Shape> OnCreated;
@@ -42,6 +42,7 @@ public class Shape : MonoBehaviour, IBeginDragHandler, IEndDragHandler, IDragHan
 
     public void OnBeginDrag(PointerEventData eventData)
     {
+        SetCanRotate(false);
         _offset = (Vector2)transform.position - eventData.position;
         OnDragBegin?.Invoke(this);
     }

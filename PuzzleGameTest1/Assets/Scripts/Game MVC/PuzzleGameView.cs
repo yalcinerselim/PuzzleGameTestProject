@@ -1,23 +1,45 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using System.Linq;
+using PrimeTween;
+using Unity.VisualScripting;
+using UnityEngine.Events;
+using UnityEngine.UI;
+using Random = UnityEngine.Random;
 
 public class PuzzleGameView : MonoBehaviour
 {
+    public UnityAction<List<GridCell>> InitialiseComplete;
+    public UnityAction<int> ShapePlaced;
+    
+    #region Serialized fields
+    [SerializeField] private PuzzleGameController controller;
+    
+    [SerializeField] private RectTransform gameArea;
+    
     [SerializeField] private List<GameObject> _shapePrefabList;
     [SerializeField] private List<Shape> shapes;
 
-    [SerializeField] private Transform _shapeSpawnArea;
+    [SerializeField] private RectTransform _shapeSpawnArea;
     [SerializeField] private Transform _dragLayer;
     [SerializeField] private Transform _emptyLayer;
+    [SerializeField] private GameObject _backgroundImg;
+    [SerializeField] private Text countDownText;
     [SerializeField] private Transform _grid;
+    [SerializeField] private GameObject gridCellPrefab;
+    [SerializeField] private Text timerText;
+    #endregion
 
+    #region Private fields
     private Transform _parentAfterDrag;
-    private Vector2 _locationBeforeDrag;
-    private Transform _parentBeforeDrag;
-    List<ShapeCell> shapeCells;
-
+    private List<ShapeCell> shapeCells;
+    private List<int> levelShapes;
+    private int gridSize;
+    private List<int> shapeAngels;
+    private List<GridCell> _gridCells = new List<GridCell>();
+    private int colorSequence = 0;
     private readonly List<Color> colors = new()
     {
         new (204, 0, 0),
@@ -29,49 +51,190 @@ public class PuzzleGameView : MonoBehaviour
         new (255, 204, 0),
         new (255, 102, 0),
     };
-
-    private int[] levelShapes;
+    #endregion
+    
+    private void Awake()
+    {
+        controller.GameStart += LevelUIInitialise;
+        controller.LevelUp += LevelClear;
+        controller.GameEnd += GameEnd;
+    }
 
     private void Start()
     {
-        // Burada level icerisinde olusturulacak sekillerin ID leri rastgele olarak belirleniyor.
-        levelShapes = new int[] { Random.Range(0, _shapePrefabList.Count - 2), Random.Range(0, _shapePrefabList.Count - 2), Random.Range(0, _shapePrefabList.Count - 2)};
-        // Random.Range(0, _shapePrefabList.Count - 2)
-        InstantiateShapes(levelShapes);
+        MoveScene();
     }
 
-    private void InstantiateShapes(int[] arr)
+    private void MoveScene()
+    {
+     	gameArea.anchoredPosition -= new Vector2(0f, 1910f);
+        Tween.Position(
+           target: gameArea,
+           endValue: new Vector3(540f, 970f, 0f),
+           duration: 1.2f,
+           Ease.Default
+        );
+    }
+
+    private void LevelUIInitialise(PuzzleGameModel model)
+    {
+        gridSize = model.gridSize;
+        shapeAngels = model.shapeAngels;
+        levelShapes = model.levelShapeIDs;
+        controller.inGameCountDown = model.gameTime;
+        InitialiseGrid();
+        InitialiseShapes();
+        countDownText.raycastTarget = true;
+        InitialiseComplete?.Invoke(_gridCells);
+    }
+
+    private void LevelClear()
+    {
+        foreach (var shape in shapes)
+        {
+            shape.OnCreated -= HandleShapeCreated;
+            shape.OnDragBegin -=  HandleDragBegin;
+            shape.OnDropped -= HandleDropped;
+        }
+        foreach (var shape in shapes)
+        {
+            Destroy(shape.gameObject);
+        }
+        shapes.Clear();
+        
+        foreach (var gridCell in controller._gridCells)
+        {
+            Destroy(gridCell.gameObject);
+        }
+        controller._gridCells.Clear();
+        
+        controller.occupiedCells = 0;
+        timerText.text = "Score: 150";
+        colorSequence = 0;
+        controller.inGameCountDown = 0;
+    }
+    public void GameOver()
+    {
+        timerText.text = "Score: " + controller.score;
+        
+        countDownText.text = "Game Over";
+        
+        countDownText.raycastTarget = true;
+    }
+
+    private void GameEnd()
+    {
+        countDownText.text = "Game End\n\nScore: 150";
+        countDownText.raycastTarget = true;
+        timerText.text = "";
+    }
+
+    #region CountDown Methods
+    public void ChangeCountDownText(float value)
+    {
+        if (value == 0)
+        {
+            countDownText.text = "GO!";
+            return;
+        }
+        else if (value < 0)
+        {
+            countDownText.raycastTarget = false;
+            countDownText.text = "";
+            return;
+        }
+        countDownText.text = value.ToString();
+    }
+
+    public void ChangeInGameCountDownText(float value)
+    {
+        timerText.text = value.ToString();
+    }
+    
+    #endregion
+    
+    #region Grid Methods
+    private void InitialiseGrid()
+    {
+        SetGridLayoutGroup();
+        
+        for (var i = 0; i < gridSize * gridSize; i++)
+        {
+            GameObject cellInstance = Instantiate(gridCellPrefab, _grid);
+            GridCell cell = cellInstance.GetComponent<GridCell>();
+            _gridCells.Add(cell);
+        }
+    }
+
+    private void SetGridLayoutGroup()
+    {
+        GridLayoutGroup layout = _grid.GetComponent<GridLayoutGroup>();
+        RectTransform rectTransform = layout.GetComponent<RectTransform>();
+        if (rectTransform == null)
+        {
+            _grid.AddComponent<RectTransform>();
+        }
+        var parentGridSize = rectTransform.rect.width;
+        var cellSize = parentGridSize / gridSize * 0.8f;
+        
+        layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        layout.constraintCount = gridSize;
+
+        layout.cellSize = new Vector2(cellSize, cellSize);
+        layout.spacing = Vector2.zero;
+        layout.padding = new RectOffset(0, 0, 0, 0);
+    }
+    #endregion
+
+    #region Shape Methods
+    private void InitialiseShapes()
     {
         // Burada id ye gore prefab listeden sekiller olusturuluyor.
         shapes = new List<Shape>();
-
-        for (int i = 0; i < arr.Length; i++)
+        int i = 0;
+        Rect rect = _shapeSpawnArea.rect;
+        foreach (var shapeID in levelShapes)
         {
-            int id = arr[i];
-            GameObject shapeInstance = Instantiate(_shapePrefabList.FirstOrDefault(p => p.GetComponent<Shape>().shapeID == id), _shapeSpawnArea.transform);
+            float randomX = Random.Range(rect.xMin + 10, rect.xMax - 10);
+            float randomY = Random.Range(rect.yMin + 10, rect.yMax - 10);
+            Vector3 randomPos = new Vector3(randomX, randomY, 1);
+            
+            Quaternion rotation = Quaternion.Euler(0,0, shapeAngels[i]);
+            GameObject shapeInstance = Instantiate(_shapePrefabList.FirstOrDefault(p => p.GetComponent<Shape>().shapeID == shapeID), _shapeSpawnArea.transform);
             Shape shape = shapeInstance.GetComponent<Shape>();
             shapes.Add(shape);
-
+            
+            var shapeRect = shape.GetComponent<RectTransform>();
+            shapeRect.localPosition = randomPos;
+            shapeRect.localRotation = rotation;
+            
             shape.OnCreated += HandleShapeCreated;
             shape.OnDragBegin += HandleDragBegin;
             shape.OnDropped += HandleDropped;
+            i += 1;
         }
+        
     }
 
     private void HandleShapeCreated(Shape shape)
     {
+        //SetShapeScale(shape, gridSize);
         SetShapeColor(shape);
-        SetShapeScale(shape, 3);
     }
 
     void SetShapeColor(Shape shape)
     {
+        if (colorSequence == colors.Count)
+        {
+            colorSequence = 0;
+        }
         shapeCells = shape.shapeCells;
-        Color color = colors[shape.shapeID % colors.Count];
+        Color color = colors[colorSequence];
         foreach (ShapeCell cell in shapeCells)
         {
             cell.SetColor(color);
         }
+        colorSequence += 1;
     }
     void SetShapeScale(Shape shape, int gridSize)
     {
@@ -80,12 +243,11 @@ public class PuzzleGameView : MonoBehaviour
 
     void HandleDragBegin(Shape shape)
     {
-        _locationBeforeDrag = shape.GetComponent<RectTransform>().anchoredPosition;
-        _parentBeforeDrag = shape.transform.parent;
         shape.SetCanRotate(false);
         
         shape.transform.SetParent(_dragLayer, true);
         SetCanvasGroup(false);
+        SetShapeScale(shape, gridSize);
         
         CheckObjectUnderShapeCellOnDragBegin(shape);
     }
@@ -100,7 +262,7 @@ public class PuzzleGameView : MonoBehaviour
             SetCanvasGroup(true);
             return;
         }
-        // Burada obje b�rka�ld��� noktada raycast sonucu null de�ilse, _parentAfterDrag de�i�keni g�ncellenir.
+        // Burada obje bırakıldığı noktada raycast sonucu null değilse, _parentAfterDrag değişkeni güncellenir.
         _parentAfterDrag = eventData.pointerCurrentRaycast.gameObject.transform;
         SetParentAfterDrag(shape);
         SetCanvasGroup(true);
@@ -164,6 +326,7 @@ public class PuzzleGameView : MonoBehaviour
                 }
                 shape.transform.SetParent(_dragLayer, true);
                 shape.SetCanRotate(false);
+                ShapePlaced?.Invoke(gridSize);
             }
         }
     }
@@ -182,4 +345,5 @@ public class PuzzleGameView : MonoBehaviour
             }
         }
     }
+    #endregion
 }

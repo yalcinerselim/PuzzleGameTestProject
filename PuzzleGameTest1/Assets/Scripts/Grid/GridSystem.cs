@@ -18,7 +18,6 @@ public class GridSystem : MonoBehaviour
     {
         SetGridLayoutGroup();
 
-        // Grid hücrelerini oluþtur  
         for (int i = 0; i < gridSize * gridSize; i++)
         {
             Instantiate(gridCellPrefab, gridParent);
@@ -31,12 +30,11 @@ public class GridSystem : MonoBehaviour
         RectTransform rectTransform = gridParent.GetComponent<RectTransform>();
         if (rectTransform == null)
         {
-            Debug.LogError("GridParent için RectTransform bileþeni bulunamadý.");
+            Debug.LogError("GridParent iï¿½in RectTransform bileï¿½eni bulunamadï¿½.");
             return;
         }
-        //float parentGridSize = Mathf.Min(rectTransform.rect.width, rectTransform.rect.height);
         float parentGridSize = rectTransform.rect.width;
-        float cellSize = SetCellSize(parentGridSize);
+        float cellSize = parentGridSize / gridSize * 0.8f;
 
         layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
         layout.constraintCount = gridSize;
@@ -44,9 +42,5 @@ public class GridSystem : MonoBehaviour
         layout.cellSize = new Vector2(cellSize, cellSize);
         layout.spacing = Vector2.zero;
         layout.padding = new RectOffset(0, 0, 0, 0);
-    }
-    float SetCellSize(float parentSize)
-    {
-        return parentSize / gridSize * 0.8f;
     }
 }

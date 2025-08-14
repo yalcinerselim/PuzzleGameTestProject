@@ -246,7 +246,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8c35c800dd26ad844be04293b11ce41c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  shapeID: 10
+  shapeID: 11
   shapeCells: []
   _canRotate: 1
 --- !u!1 &5755007920431022350

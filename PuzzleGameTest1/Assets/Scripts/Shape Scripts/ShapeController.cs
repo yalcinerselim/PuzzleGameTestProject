@@ -5,21 +5,14 @@ using UnityEngine.EventSystems;
 
 public class ShapeController : MonoBehaviour
 {
-    // Bu s�n�f tek bir shape nesnesini kontrol etmek i�in de�il, sahnedeki t�m shape nesnelerini kontrol etmek i�in tasarlanm��t�r.
-    // Orant�: scale = -0.5 * gridSize + 4
-    // E�er shape gride oturmu�sa d�nd�r�lememelidir.
-
     [SerializeField] private List<GameObject> _shapePrefabList; 
     [SerializeField] private List<Shape> shapes;
 
     [SerializeField] private Transform _shapeSpawnArea;
     [SerializeField] private Transform _dragLayer;
     [SerializeField] private Transform _emptyLayer;
-    [SerializeField] private Transform _grid;
 
     private Transform _parentAfterDrag;
-    private Vector2 _locationBeforeDrag;
-    private Transform _parentBeforeDrag;
     List<ShapeCell> shapeCells;
 
     private readonly List<Color> colors = new()
@@ -38,15 +31,15 @@ public class ShapeController : MonoBehaviour
 
     private void Start()
     {
-        // Burada level i�erisinde olu�turulacak �ekillerin ID leri rastgele olarak belirleniyor.
-        levelShapes = new int[] { Random.Range(0, _shapePrefabList.Count - 2), Random.Range(0, _shapePrefabList.Count - 2), Random.Range(0, _shapePrefabList.Count - 2) }; 
+        // Burada level içerisinde oluşturulacak şekillerin ID leri rastgele olarak belirleniyor.
+        levelShapes = new int[] { Random.Range(0, _shapePrefabList.Count - 1), Random.Range(0, _shapePrefabList.Count - 1), Random.Range(0, _shapePrefabList.Count - 1) }; 
 
         InstantiateShapes(levelShapes);
     }
 
     private void InstantiateShapes(int[] arr)
     {
-        // Burada id ye g�re prefab listeden �ekiller olu�turuluyor.
+        // Burada id ye göre prefab listeden şekiller oluşturuluyor.
         shapes = new List<Shape>();
 
         for (int i = 0; i < arr.Length; i++)
@@ -71,7 +64,7 @@ public class ShapeController : MonoBehaviour
     void SetShapeColor(Shape shape)
     {
         shapeCells = shape.shapeCells;
-        Color color = colors[shape.shapeID % colors.Count]; // Renkler listesi �zerinden d�ng�sel olarak renk atamas� yap�l�yor.
+        Color color = colors[shape.shapeID % colors.Count]; // Renkler listesi üzerinden döngüsel olarak renk ataması yapılıyor.
         foreach (ShapeCell cell in shapeCells)
         {
             cell.SetColor(color);
@@ -84,14 +77,10 @@ public class ShapeController : MonoBehaviour
 
     void HandleDragBegin(Shape shape)
     {
-        // Burada shape nesnesi s�r�klenmeye ba�land���nda s�r�klenmeden �nceki anchored position ve parent kaydedilir.
-        _locationBeforeDrag = shape.GetComponent<RectTransform>().anchoredPosition;
-        _parentBeforeDrag = shape.transform.parent;
-
         // Burada shape s�r�klenirken _dragLayer'a child olarak ta��n�r. ��nk� Empty Layer Gridin alt�nda kal�yor.
         shape.transform.SetParent(_dragLayer, true);
         SetCanvasGroup(false);
-        // Shape s�r�klenmeye ba�lad���nda, shape h�crelerinin alt�nda bulunan objeler e�er Grid cell ise , bu h�crelerin occupied durumlar� false olarak ayarlan�r.
+        // Shape sürüklenmeye başladığında, shape hücrelerinin altında bulunan objeler eğer Grid cell ise , bu hücrelerin occupied durumları false olarak ayarlanır.
         CheckObjectUnderShapeCellOnDragBegin(shape);
     }
 
@@ -105,7 +94,7 @@ public class ShapeController : MonoBehaviour
             SetCanvasGroup(true);
             return;
         }
-        // Burada obje b�rka�ld��� noktada raycast sonucu null de�ilse, _parentAfterDrag de�i�keni g�ncellenir.
+        // Burada obje bırakıldığı noktada raycast sonucu null değilse, _parentAfterDrag değişkeni güncellenir.
         _parentAfterDrag = eventData.pointerCurrentRaycast.gameObject.transform;
         SetParentAfterDrag(shape);
         SetCanvasGroup(true);
@@ -113,7 +102,7 @@ public class ShapeController : MonoBehaviour
 
     void SetCanvasGroup(bool status)
     {
-        // Burada bir shape objesi s�r�klenirken b�t�n shape nesnelerinin CanvasGroup bile�eninin blocksRaycasts �zelli�i false olarak ayarlan�r.
+        // Burada bir shape objesi sürüklenirken bütün shape nesnelerinin CanvasGroup bileşeninin blocksRaycasts özelliği false olarak ayarlanır.
         foreach (Shape shape in shapes)
         {
             shape.GetComponent<CanvasGroup>().blocksRaycasts = status;
